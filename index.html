@@ -1,0 +1,1049 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Presensi & Rekap Absensi - SMKN 2 Toraja Utara</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: radial-gradient(ellipse at top, rgba(219, 234, 254, 0.65), transparent 55%);
+        }
+
+        .print-container .fa-graduation-cap {
+            color: transparent;
+            background: linear-gradient(135deg, #2563eb, #7c3aed);
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+
+        .print-container .fa-book-open-reader {
+            color: transparent;
+            background: linear-gradient(135deg, #059669, #eab308);
+            background-clip: text;
+            -webkit-background-clip: text;
+        }
+
+        header.no-print {
+            background-color: #0f172a;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+            backdrop-filter: blur(12px);
+        }
+
+        header.no-print button,
+        header.no-print select {
+            min-height: 2.25rem;
+        }
+
+        header.no-print button:focus-visible,
+        header.no-print select:focus-visible {
+            outline: 2px solid #93c5fd;
+            outline-offset: 2px;
+        }
+
+        .class-controls {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        #classSelect {
+            max-width: 13rem;
+        }
+
+        .print-container {
+            border-top: 4px solid #2563eb;
+        }
+
+        .print-container > div:first-child {
+            border-color: #334155;
+        }
+
+        .print-container > div:nth-child(2) > div:nth-child(2) {
+            box-shadow: inset 3px 0 #3b82f6;
+        }
+
+        .table-responsive {
+            border-color: #cbd5e1;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+            overscroll-behavior-x: contain;
+            scrollbar-color: #94a3b8 #f1f5f9;
+            scrollbar-width: thin;
+        }
+
+        #attendanceTable {
+            min-width: 1100px;
+        }
+
+        #attendanceTable thead th {
+            white-space: nowrap;
+        }
+
+        #studentTableBody tr {
+            transition: background-color 150ms ease;
+        }
+
+        #studentTableBody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        #studentTableBody td {
+            height: 2rem;
+        }
+
+        #studentTableBody td[onclick] {
+            cursor: pointer;
+        }
+
+        #studentTableBody td[onclick]:hover {
+            filter: brightness(0.96);
+        }
+
+        #attendanceTable tfoot tr:first-child td {
+            border-top: 2px solid #94a3b8;
+        }
+
+        #attendanceTable tfoot tr td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            min-width: 180px;
+            box-shadow: 1px 0 #cbd5e1;
+        }
+
+        .print-container > div.grid.grid-cols-2 > div {
+            box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+            transition: transform 150ms ease, box-shadow 150ms ease;
+        }
+
+        .print-container > div.grid.grid-cols-2 > div:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+        }
+
+        @media (max-width: 640px) {
+            header.no-print > div {
+                align-items: flex-start;
+            }
+
+            header.no-print > div > div:last-child {
+                width: 100%;
+            }
+
+            .class-controls {
+                width: 100%;
+            }
+
+            #classSelect {
+                max-width: 10rem;
+            }
+
+            header.no-print button {
+                flex: 1 1 calc(50% - 0.5rem);
+                justify-content: center;
+            }
+
+            main {
+                padding-top: 1rem;
+            }
+
+            .print-container {
+                padding: 1rem;
+                border-radius: 0.75rem;
+            }
+
+            .print-container > div:first-child > div {
+                padding-left: 0.25rem;
+                padding-right: 0.25rem;
+            }
+
+            .print-container > div:first-child p {
+                overflow-wrap: anywhere;
+            }
+
+            .print-container > div:nth-child(2) > div:nth-child(2) {
+                padding: 0.875rem;
+            }
+
+            .print-container > div:nth-child(2) > div:nth-child(2) > div {
+                align-items: flex-start;
+            }
+
+            .print-container > div:last-child > div {
+                flex-direction: column;
+                align-items: center;
+                gap: 1.75rem;
+            }
+
+            .print-container > div:last-child > div > div {
+                width: 100%;
+                max-width: 20rem;
+            }
+        }
+
+        /* Custom print styles */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background-color: white !important;
+                background-image: none !important;
+                color: black !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .print-container {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+                width: 100% !important;
+                max-width: 100% !important;
+            }
+            table {
+                font-size: 10px !important;
+            }
+            #attendanceTable {
+                min-width: 0 !important;
+            }
+            #attendanceTable tfoot tr td:first-child {
+                position: static;
+                min-width: 0;
+                box-shadow: none;
+            }
+            th, td {
+                padding: 3px 2px !important;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+            select, input {
+                border: none !important;
+                background: transparent !important;
+                appearance: none !important;
+                -webkit-appearance: none !important;
+            }
+        }
+
+        /* Custom scrollbar for table */
+        .table-responsive::-webkit-scrollbar {
+            height: 8px;
+            width: 8px;
+        }
+        .table-responsive::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        .table-responsive::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .table-responsive::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800">
+
+    <!-- Top Action Toolbar (Hidden during print) -->
+    <header class="no-print bg-slate-800 text-white sticky top-0 z-50 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-blue-600 rounded-lg">
+                    <i class="fa-solid font-bold fa-clipboard-user text-xl text-white"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">Presensi Digital SMKN 2 Toraja Utara</h1>
+                    <p id="activeClassSubtitle" class="text-xs text-slate-300">Informatika - Kelas X DPB B</p>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="class-controls rounded-lg bg-slate-700 p-1 text-sm">
+                    <label for="classSelect" class="px-2 text-xs text-slate-300 font-medium">Kelas:</label>
+                    <select id="classSelect" class="min-w-24 bg-slate-800 text-white rounded px-2 py-1 text-xs focus:outline-none border border-slate-600" onchange="switchClass(this.value)" aria-label="Pilih kelas"></select>
+                    <button onclick="openEntryModal('class')" class="px-2 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1" title="Tambah kelas">
+                        <i class="fa-solid fa-plus"></i> Kelas
+                    </button>
+                    <button onclick="openEntryModal('student')" class="px-2 py-1.5 bg-cyan-600 hover:bg-cyan-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1" title="Tambah nama murid">
+                        <i class="fa-solid fa-user-plus"></i> Murid
+                    </button>
+                </div>
+                <div class="flex items-center bg-slate-700 rounded-lg p-1 text-sm">
+                    <label for="monthSelect" class="px-2 text-xs text-slate-300 font-medium">Bulan:</label>
+                    <select id="monthSelect" class="bg-slate-800 text-white rounded px-2 py-1 text-xs focus:outline-none border border-slate-600" onchange="renderTable()">
+                        <option value="0">Januari</option>
+                        <option value="1">Februari</option>
+                        <option value="2">Maret</option>
+                        <option value="3">April</option>
+                        <option value="4">Mei</option>
+                        <option value="5">Juni</option>
+                        <option value="6">Juli</option>
+                        <option value="7">Agustus</option>
+                        <option value="8" selected>September</option>
+                        <option value="9">Oktober</option>
+                        <option value="10">November</option>
+                        <option value="11">Desember</option>
+                    </select>
+                </div>
+
+                <button onclick="clearCurrentMonthData()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm" title="Reset Absensi Bulan Ini">
+                    <i class="fa-solid fa-rotate-left"></i> Reset
+                </button>
+
+                <button onclick="openFormulaModal()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-calculator"></i> Rumus Excel
+                </button>
+
+                <button onclick="exportToExcel()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i> Ekspor Excel
+                </button>
+
+                <button onclick="window.print()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow-sm">
+                    <i class="fa-solid fa-print"></i> Cetak / PDF
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-[96%] mx-auto py-6 px-2 sm:px-4">
+        
+        <!-- Document Sheet Card -->
+        <div class="print-container bg-white rounded-xl shadow-lg border border-slate-200 p-6 md:p-8 transition-all">
+            
+            <!-- KOP SEKOLAH -->
+            <div class="border-b-4 border-double border-slate-800 pb-4 mb-6">
+                <div class="flex items-center justify-between text-center md:text-left">
+                    <div class="hidden sm:block w-20 text-center">
+                        <!-- Icon Placeholder for Logo -->
+                        <i class="fa-solid fa-graduation-cap text-5xl text-slate-700"></i>
+                    </div>
+                    <div class="flex-1 text-center px-4">
+                        <h2 class="text-sm font-semibold tracking-wider text-slate-600 uppercase">PEMERINTAH PROVINSI SULAWESI SELATAN</h2>
+                        <h3 class="text-sm font-semibold tracking-wider text-slate-600 uppercase">DINAS PENDIDIKAN</h3>
+                        <h1 class="text-xl md:text-2xl font-black text-slate-900 tracking-wide uppercase mt-0.5">SMK NEGERI 2 TORAJA UTARA</h1>
+                        <p class="text-xs text-slate-500 mt-1">Alamat: Jl. Poros Sa'dan, Toraja Utara, Sulawesi Selatan | Email: smkn2torajautara@sch.id</p>
+                    </div>
+                    <div class="hidden sm:block w-20 text-center">
+                        <i class="fa-solid fa-book-open-reader text-5xl text-slate-700"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JUDUL DOKUMEN & IDENTITAS -->
+            <div class="mb-6">
+                <div class="text-center mb-5">
+                    <h2 class="text-lg md:text-xl font-bold uppercase underline text-slate-800 tracking-wide">DAFTAR HADIR & REKAPITULASI ABSENSI SISWA</h2>
+                    <p class="text-xs font-medium text-slate-600 mt-0.5">Tahun Ajaran 2026/2027</p>
+                </div>
+
+                <!-- Detail Metadata -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 text-xs md:text-sm text-slate-700 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                    <div class="space-y-1.5">
+                        <div class="flex"><span class="w-36 font-semibold">Mata Pelajaran</span><span class="mr-2">:</span><span class="font-medium">Informatika</span></div>
+                        <div class="flex"><span class="w-36 font-semibold">Kelas / Keahlian</span><span class="mr-2">:</span><span id="currentClassName" class="font-medium">Kelas X DPB B</span></div>
+                        <div class="flex"><span class="w-36 font-semibold">Sekolah</span><span class="mr-2">:</span><span class="font-medium">SMK Negeri 2 Toraja Utara</span></div>
+                    </div>
+                    <div class="space-y-1.5">
+                        <div class="flex"><span class="w-36 font-semibold">Bulan / Semester</span><span class="mr-2">:</span><span id="displayMonth" class="font-medium">September 2026 / Ganjil</span></div>
+                        <div class="flex"><span class="w-36 font-semibold">Guru Mata Pelajaran</span><span class="mr-2">:</span><span class="font-medium">Eka Rahmawati Gunar, S.Pd.</span></div>
+                        <div class="flex"><span class="w-36 font-semibold">Jumlah Siswa</span><span class="mr-2">:</span><span class="font-medium"><span id="studentCount">23</span> Orang</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- KETERANGAN KODE ABSENSI & PETUNJUK -->
+            <div class="no-print mb-4 flex flex-wrap items-center justify-between gap-3 bg-blue-50 border border-blue-200 p-3 rounded-lg text-xs text-blue-900">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-circle-info text-blue-600 text-sm"></i>
+                    <span class="font-semibold">Kode Status Presensi:</span>
+                    <span class="bg-emerald-100 text-emerald-800 font-bold px-1.5 py-0.5 rounded border border-emerald-300">H</span> Hadir | 
+                    <span class="bg-amber-100 text-amber-800 font-bold px-1.5 py-0.5 rounded border border-amber-300">S</span> Sakit | 
+                    <span class="bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded border border-blue-300">I</span> Izin | 
+                    <span class="bg-rose-100 text-rose-800 font-bold px-1.5 py-0.5 rounded border border-rose-300">A</span> Alpa | 
+                    <span class="bg-purple-100 text-purple-800 font-bold px-1.5 py-0.5 rounded border border-purple-300">B</span> Bolos
+                </div>
+                <div class="text-slate-500 italic">
+                    *Klik pada kolom tanggal untuk mengubah status kehadiran siswa.
+                </div>
+            </div>
+
+            <!-- TABEL UTAMA ABSENSI -->
+            <div class="table-responsive overflow-x-auto border border-slate-300 rounded-lg shadow-sm">
+                <table id="attendanceTable" class="w-full text-center border-collapse text-xs">
+                    <thead>
+                        <!-- Header Row 1 -->
+                        <tr class="bg-slate-700 text-white font-semibold">
+                            <th rowspan="2" class="border border-slate-500 p-2 w-8">NO</th>
+                            <th rowspan="2" class="border border-slate-500 p-2 min-w-[180px] text-left">NAMA SISWA</th>
+                            <th id="dateHeader" colspan="31" class="border border-slate-500 py-1 tracking-wider uppercase">
+                                PERTEMUAN / TANGGAL BULAN <span id="monthHeaderTitle">SEPTEMBER</span>
+                            </th>
+                            <th colspan="5" class="border border-slate-500 py-1 bg-slate-800">REKAP ABSEN</th>
+                            <th rowspan="2" class="border border-slate-500 p-1 w-12 bg-slate-900 text-amber-300">% HADIR</th>
+                        </tr>
+                        <!-- Header Row 2 (Tanggal 1 - 31) -->
+                        <tr id="dateSubHeader" class="bg-slate-600 text-white font-bold text-[10px]">
+                            <!-- Generated by JS -->
+                        </tr>
+                    </thead>
+                    <tbody id="studentTableBody" class="bg-white divide-y divide-slate-200">
+                        <!-- Generated by JS -->
+                    </tbody>
+                    <tfoot>
+                        <!-- Rekapitulasi Harian -->
+                        <tr id="dailyHadirRow" class="bg-slate-100 font-bold text-slate-700">
+                            <td colspan="2" class="border border-slate-300 p-1.5 text-right font-bold text-xs bg-slate-200">Total Hadir (H)</td>
+                        </tr>
+                        <tr id="dailySakitRow" class="bg-slate-100 font-bold text-slate-700">
+                            <td colspan="2" class="border border-slate-300 p-1.5 text-right font-bold text-xs bg-slate-200">Total Sakit (S)</td>
+                        </tr>
+                        <tr id="dailyIzinRow" class="bg-slate-100 font-bold text-slate-700">
+                            <td colspan="2" class="border border-slate-300 p-1.5 text-right font-bold text-xs bg-slate-200">Total Izin (I)</td>
+                        </tr>
+                        <tr id="dailyAlpaRow" class="bg-slate-100 font-bold text-slate-700">
+                            <td colspan="2" class="border border-slate-300 p-1.5 text-right font-bold text-xs bg-slate-200">Total Alpa (A)</td>
+                        </tr>
+                        <tr id="dailyBolosRow" class="bg-slate-100 font-bold text-slate-700">
+                            <td colspan="2" class="border border-slate-300 p-1.5 text-right font-bold text-xs bg-slate-200">Total Bolos (B)</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+
+            <!-- RINGKASAN PERSENTASE KELAS -->
+            <div class="mt-6 grid grid-cols-2 sm:grid-cols-5 gap-3 text-center no-print">
+                <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-lg">
+                    <span class="block text-xs font-semibold text-emerald-700">Rata-rata Kehadiran</span>
+                    <span id="classAvgPresence" class="text-xl font-bold text-emerald-800">0%</span>
+                </div>
+                <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg">
+                    <span class="block text-xs font-semibold text-amber-700">Total Sakit</span>
+                    <span id="classTotalSakit" class="text-xl font-bold text-amber-800">0</span>
+                </div>
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded-lg">
+                    <span class="block text-xs font-semibold text-blue-700">Total Izin</span>
+                    <span id="classTotalIzin" class="text-xl font-bold text-blue-800">0</span>
+                </div>
+                <div class="bg-rose-50 border border-rose-200 p-3 rounded-lg">
+                    <span class="block text-xs font-semibold text-rose-700">Total Alpa</span>
+                    <span id="classTotalAlpa" class="text-xl font-bold text-rose-800">0</span>
+                </div>
+                <div class="bg-purple-50 border border-purple-200 p-3 rounded-lg col-span-2 sm:col-span-1">
+                    <span class="block text-xs font-semibold text-purple-700">Total Bolos</span>
+                    <span id="classTotalBolos" class="text-xl font-bold text-purple-800">0</span>
+                </div>
+            </div>
+
+            <!-- KOLOM TANDA TANGAN (LEGITIMASI) -->
+            <div class="mt-12 pt-4 text-xs md:text-sm font-medium text-slate-800">
+                <div class="flex justify-between items-start">
+                    <!-- Tanda Tangan Kepala Sekolah (Kiri) -->
+                    <div class="text-center w-64 space-y-1">
+                        <p class="font-normal">Mengetahui,</p>
+                        <p class="font-semibold">Kepala SMKN 2 Toraja Utara</p>
+                        <div class="h-20 flex items-center justify-center">
+                            <!-- Placeholder Stempel/TTD -->
+                            <span class="text-slate-300 text-xs italic">[ Tanda Tangan & Stempel ]</span>
+                        </div>
+                        <p class="font-bold underline text-slate-900">YUSUF KALU, S.Pd., M.M.</p>
+                        <p class="text-xs text-slate-600">NIP. 19681231 199403 1 012</p>
+                    </div>
+
+                    <!-- Tanda Tangan Guru Mata Pelajaran (Kanan) -->
+                    <div class="text-center w-64 space-y-1">
+                        <p class="font-normal">Toraja Utara, <span id="currentDateFormatted">30 September 2026</span></p>
+                        <p class="font-semibold">Guru Mata Pelajaran Informatika</p>
+                        <div class="h-20 flex items-center justify-center">
+                            <span class="text-slate-300 text-xs italic">[ Tanda Tangan ]</span>
+                        </div>
+                        <p class="font-bold underline text-slate-900">EKA RAHMAWATI GUNAR, S.Pd.</p>
+                        <p class="text-xs text-slate-600">NIP. 19920515 201903 2 018</p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL PENJELASAN RUMUS EXCEL / GOOGLE SHEETS -->
+    <div id="formulaModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full p-6 overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-600"></i> Rumus Excel & Google Sheets
+                </h3>
+                <button onclick="closeFormulaModal()" class="text-slate-400 hover:text-slate-600 text-lg">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            
+            <div class="py-4 overflow-y-auto space-y-4 text-xs text-slate-700 leading-relaxed">
+                <p>Berikut adalah rumus yang dapat Anda gunakan saat memindahkan format ini ke **Microsoft Excel** atau **Google Sheets**: </p>
+
+                <!-- Rumus 1: Jumlah Hadir -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 class="font-bold text-slate-900 mb-1">1. Menghitung Jumlah Status Presensi (H, S, I, A, B)</h4>
+                    <p class="mb-2">Gunakan rumus <code class="bg-slate-200 text-rose-700 px-1 py-0.5 rounded font-mono">COUNTIF</code> untuk menghitung kemunculan kode di rentang tanggal (Misal: Baris Siswa ke-1 dari kolom <strong>D7</strong> sampai <strong>AH7</strong>):</p>
+                    <ul class="space-y-1 font-mono text-[11px]">
+                        <li><strong class="font-sans">Hadir (H):</strong> <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">=COUNTIF(D7:AH7; "H")</span></li>
+                        <li><strong class="font-sans">Sakit (S):</strong> <span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded">=COUNTIF(D7:AH7; "S")</span></li>
+                        <li><strong class="font-sans">Izin (I):</strong> <span class="bg-blue-100 text-blue-800 px-2 py-0.5 rounded">=COUNTIF(D7:AH7; "I")</span></li>
+                        <li><strong class="font-sans">Alpa (A):</strong> <span class="bg-rose-100 text-rose-800 px-2 py-0.5 rounded">=COUNTIF(D7:AH7; "A")</span></li>
+                        <li><strong class="font-sans">Bolos (B):</strong> <span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded">=COUNTIF(D7:AH7; "B")</span></li>
+                    </ul>
+                </div>
+
+                <!-- Rumus 2: Persentase Kehadiran -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 class="font-bold text-slate-900 mb-1">2. Menghitung Persentase Kehadiran (%)</h4>
+                    <p class="mb-2">Persentase dihitung dari perbandingan Jumlah Hadir (H) dengan Total Hari Pertemuan yang terisi:</p>
+                    <div class="bg-slate-800 text-amber-300 p-2.5 rounded font-mono text-[11px] overflow-x-auto">
+                        =IF(COUNTA(D7:AH7)>0; (AI7 / COUNTA(D7:AH7)) * 100; 0)
+                    </div>
+                    <p class="mt-1 text-[11px] text-slate-500">*Catatan: Ganti <code class="font-mono">AI7</code> dengan sel hasil Total Hadir (H).</p>
+                </div>
+
+                <!-- Rumus 3: Rekap Harian -->
+                <div class="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                    <h4 class="font-bold text-slate-900 mb-1">3. Menghitung Rekap Harian (Bawah Tabel)</h4>
+                    <p class="mb-1">Untuk menghitung total siswa yang hadir pada tanggal tertentu (Misal Tanggal 1 di kolom <strong>D7</strong> s.d. <strong>D29</strong>):</p>
+                    <div class="bg-slate-800 text-emerald-400 p-2.5 rounded font-mono text-[11px]">
+                        =COUNTIF(D7:D29; "H")
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-200 text-right">
+                <button onclick="closeFormulaModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg text-xs">
+                    Tutup Panduan
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="entryModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="entryModalTitle">
+        <form onsubmit="submitEntryModal(event)" class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <div class="flex justify-between items-center pb-3 border-b border-slate-200">
+                <h3 id="entryModalTitle" class="text-lg font-bold text-slate-800">Tambah Data</h3>
+                <button type="button" onclick="closeEntryModal()" class="text-slate-400 hover:text-slate-600 text-lg" aria-label="Tutup">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <label id="entryModalLabel" for="entryModalInput" class="block mt-4 mb-2 text-sm font-medium text-slate-700">Nama</label>
+            <input id="entryModalInput" type="text" maxlength="80" required autocomplete="off" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200">
+            <p id="entryModalError" class="mt-2 min-h-5 text-xs text-rose-600" role="alert"></p>
+            <div class="mt-4 flex justify-end gap-2">
+                <button type="button" onclick="closeEntryModal()" class="px-4 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50">Batal</button>
+                <button id="entryModalSubmit" type="submit" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700">Simpan</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Data Siswa SMKN 2 Toraja Utara - Kelas X DPB B
+        const defaultStudents = [
+            "Anggun Ayu Puspita",
+            "Brinet",
+            "Devita Rambung Pangingi'",
+            "Dolfiami Tangkelayuk",
+            "Elma Yanti Garanta",
+            "Epa Tangkelangan",
+            "Goldi Debrianti Panggalo",
+            "Intan Uly Buntan",
+            "Jesika Lumba Rego",
+            "Juni Rante Seng",
+            "Kaivia Ratten",
+            "Kiki Ledan",
+            "Laura Salempang",
+            "Melati Bodeng Sonda",
+            "Melyana", // Nama diverifikasi & disesuaikan
+            "Pemi Aprilia",
+            "Putri Gracia Ningsi Massa",
+            "Reslianti Sampe La'bi'",
+            "Rini Pamarrang",
+            "Salmayati Rante Serrong",
+            "Sitti Matius",
+            "Sri Masita Karorong",
+            "Suryani Pare"
+        ];
+
+        const monthNames = [
+            "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+            "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+        ];
+
+        // Global State Presensi
+        // Structure: { [monthIndex]: { [studentIndex]: { [day]: 'H' | 'S' | 'I' | 'A' | 'B' | '' } } }
+        const DEFAULT_CLASS_ID = 'kelas-x-dpb-b';
+        const CLASS_STORAGE_KEY = 'smkn2_attendance_classes';
+        let classStore = [];
+        let activeClassId = DEFAULT_CLASS_ID;
+        let rawStudents = [...defaultStudents];
+        let attendanceData = {};
+        let entryModalMode = '';
+
+        // Inisialisasi Data Default
+        function initData() {
+            const savedClasses = localStorage.getItem(CLASS_STORAGE_KEY);
+            if (savedClasses) {
+                try {
+                    const parsedClasses = JSON.parse(savedClasses);
+                    if (Array.isArray(parsedClasses)) {
+                        classStore = parsedClasses.filter(classInfo =>
+                            classInfo &&
+                            typeof classInfo.id === 'string' &&
+                            typeof classInfo.name === 'string' &&
+                            Array.isArray(classInfo.students) &&
+                            classInfo.students.every(name => typeof name === 'string') &&
+                            classInfo.attendanceData &&
+                            typeof classInfo.attendanceData === 'object' &&
+                            !Array.isArray(classInfo.attendanceData)
+                        );
+                    }
+                } catch(e) {
+                    console.error('Data kelas tersimpan tidak dapat dibaca.', e);
+                }
+            }
+
+            if (classStore.length === 0) {
+                let legacyAttendance = {};
+                const savedAttendance = localStorage.getItem('smkn2_attendance_data');
+                if (savedAttendance) {
+                    try {
+                        const parsedAttendance = JSON.parse(savedAttendance);
+                        if (parsedAttendance && typeof parsedAttendance === 'object' && !Array.isArray(parsedAttendance)) {
+                            legacyAttendance = parsedAttendance;
+                        }
+                    } catch(e) {
+                        console.error('Data presensi lama tidak dapat dibaca.', e);
+                    }
+                }
+
+                classStore = [{
+                    id: DEFAULT_CLASS_ID,
+                    name: 'X DPB B',
+                    students: [...defaultStudents],
+                    attendanceData: legacyAttendance
+                }];
+            }
+
+            if (!classStore.some(classInfo => classInfo.id === DEFAULT_CLASS_ID)) {
+                classStore.unshift({
+                    id: DEFAULT_CLASS_ID,
+                    name: 'X DPB B',
+                    students: [...defaultStudents],
+                    attendanceData: {}
+                });
+            }
+
+            const savedActiveClassId = localStorage.getItem('smkn2_active_class_id');
+            activeClassId = classStore.some(classInfo => classInfo.id === savedActiveClassId)
+                ? savedActiveClassId
+                : classStore[0].id;
+            loadActiveClass();
+
+            const defaultClass = classStore.find(classInfo => classInfo.id === DEFAULT_CLASS_ID);
+            if (!defaultClass.attendanceData[8]) {
+                defaultClass.attendanceData[8] = {};
+                defaultClass.students.forEach((_, sIdx) => {
+                    defaultClass.attendanceData[8][sIdx] = {};
+                    for (let day = 1; day <= 30; day++) {
+                        const dateObj = new Date(2026, 8, day);
+                        const dayOfWeek = dateObj.getDay();
+                        if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                            const rand = Math.random();
+                            if (rand > 0.15) {
+                                defaultClass.attendanceData[8][sIdx][day] = 'H';
+                            } else if (rand > 0.10) {
+                                defaultClass.attendanceData[8][sIdx][day] = 'S';
+                            } else if (rand > 0.06) {
+                                defaultClass.attendanceData[8][sIdx][day] = 'I';
+                            } else if (rand > 0.03) {
+                                defaultClass.attendanceData[8][sIdx][day] = 'A';
+                            } else {
+                                defaultClass.attendanceData[8][sIdx][day] = 'B';
+                            }
+                        }
+                    }
+                });
+                if (activeClassId === DEFAULT_CLASS_ID) {
+                    attendanceData = defaultClass.attendanceData;
+                }
+            }
+
+            renderClassOptions();
+            saveData();
+        }
+
+        function loadActiveClass() {
+            const activeClass = classStore.find(classInfo => classInfo.id === activeClassId);
+            if (!activeClass) {
+                throw new Error(`Kelas aktif tidak ditemukan: ${activeClassId}`);
+            }
+            rawStudents = activeClass.students;
+            attendanceData = activeClass.attendanceData;
+        }
+
+        function renderClassOptions() {
+            const classSelect = document.getElementById('classSelect');
+            classSelect.replaceChildren();
+            classStore.forEach(classInfo => {
+                const option = document.createElement('option');
+                option.value = classInfo.id;
+                option.textContent = classInfo.name;
+                classSelect.appendChild(option);
+            });
+            classSelect.value = activeClassId;
+        }
+
+        function saveData() {
+            const activeClass = classStore.find(classInfo => classInfo.id === activeClassId);
+            if (!activeClass) {
+                throw new Error(`Kelas aktif tidak ditemukan: ${activeClassId}`);
+            }
+            activeClass.students = rawStudents;
+            activeClass.attendanceData = attendanceData;
+            localStorage.setItem(CLASS_STORAGE_KEY, JSON.stringify(classStore));
+            localStorage.setItem('smkn2_active_class_id', activeClassId);
+            if (activeClassId === DEFAULT_CLASS_ID) {
+                localStorage.setItem('smkn2_attendance_data', JSON.stringify(attendanceData));
+            }
+        }
+
+        function switchClass(classId) {
+            if (!classStore.some(classInfo => classInfo.id === classId)) {
+                throw new Error(`Kelas tidak ditemukan: ${classId}`);
+            }
+            activeClassId = classId;
+            loadActiveClass();
+            saveData();
+            renderTable();
+        }
+
+        function openEntryModal(mode) {
+            entryModalMode = mode;
+            const isClass = mode === 'class';
+            document.getElementById('entryModalTitle').textContent = isClass ? 'Tambah Kelas' : 'Tambah Murid';
+            document.getElementById('entryModalLabel').textContent = isClass ? 'Nama kelas' : 'Nama murid';
+            document.getElementById('entryModalInput').placeholder = isClass ? 'Contoh: X DPB A' : 'Masukkan nama lengkap murid';
+            document.getElementById('entryModalSubmit').textContent = isClass ? 'Tambah Kelas' : 'Tambah Murid';
+            document.getElementById('entryModalError').textContent = '';
+            document.getElementById('entryModal').classList.remove('hidden');
+            document.getElementById('entryModalInput').focus();
+        }
+
+        function closeEntryModal() {
+            document.getElementById('entryModal').classList.add('hidden');
+            document.getElementById('entryModalInput').value = '';
+            document.getElementById('entryModalError').textContent = '';
+            entryModalMode = '';
+        }
+
+        function submitEntryModal(event) {
+            event.preventDefault();
+            const input = document.getElementById('entryModalInput');
+            const name = input.value.trim();
+            const error = document.getElementById('entryModalError');
+            if (!name) {
+                error.textContent = 'Nama tidak boleh kosong.';
+                input.focus();
+                return;
+            }
+
+            if (entryModalMode === 'class') {
+                const duplicateClass = classStore.some(classInfo => classInfo.name.toLocaleLowerCase() === name.toLocaleLowerCase());
+                if (duplicateClass) {
+                    error.textContent = 'Nama kelas tersebut sudah ada.';
+                    input.focus();
+                    return;
+                }
+                const newClass = {
+                    id: `kelas-${Date.now()}-${classStore.length}`,
+                    name,
+                    students: [],
+                    attendanceData: {}
+                };
+                classStore.push(newClass);
+                activeClassId = newClass.id;
+                loadActiveClass();
+                renderClassOptions();
+            } else {
+                const duplicateStudent = rawStudents.some(studentName => studentName.toLocaleLowerCase() === name.toLocaleLowerCase());
+                if (duplicateStudent) {
+                    error.textContent = 'Nama murid tersebut sudah ada di kelas ini.';
+                    input.focus();
+                    return;
+                }
+                rawStudents.push(name);
+            }
+
+            saveData();
+            renderTable();
+            closeEntryModal();
+        }
+
+        function escapeHTML(value) {
+            return value.replace(/[&<>"']/g, character => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            })[character]);
+        }
+
+        function getDaysInMonth(month, year = 2026) {
+            return new Date(year, month + 1, 0).getDate();
+        }
+
+        // Render Tabel Absensi Utama
+        function renderTable() {
+            const monthIdx = parseInt(document.getElementById('monthSelect').value);
+            const totalDays = getDaysInMonth(monthIdx);
+            const monthName = monthNames[monthIdx];
+            const activeClass = classStore.find(classInfo => classInfo.id === activeClassId);
+
+            // Update Label Headers
+            document.getElementById('activeClassSubtitle').innerText = `Informatika - Kelas ${activeClass.name}`;
+            document.getElementById('currentClassName').innerText = `Kelas ${activeClass.name}`;
+            document.getElementById('studentCount').innerText = rawStudents.length;
+            document.getElementById('displayMonth').innerText = `${monthName} 2026 / Ganjil`;
+            document.getElementById('monthHeaderTitle').innerText = monthName.toUpperCase();
+            document.getElementById('dateHeader').setAttribute('colspan', totalDays);
+
+            // Render Subheader Tanggal (1 - 31)
+            const dateSubHeader = document.getElementById('dateSubHeader');
+            let dateColsHTML = '';
+            for (let d = 1; d <= totalDays; d++) {
+                const dateObj = new Date(2026, monthIdx, d);
+                const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+                const bgClass = isWeekend ? 'bg-slate-800 text-rose-300' : '';
+                dateColsHTML += `<th class="border border-slate-500 w-6 py-1 ${bgClass}" title="${d} ${monthName}">${d}</th>`;
+            }
+            dateSubHeader.innerHTML = dateColsHTML;
+
+            // Render Body Siswa
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+
+            if (!attendanceData[monthIdx]) {
+                attendanceData[monthIdx] = {};
+            }
+
+            // Stats Aggregation
+            let totalClassH = 0, totalClassS = 0, totalClassI = 0, totalClassA = 0, totalClassB = 0;
+            let totalClassEntries = 0;
+
+            rawStudents.forEach((studentName, sIdx) => {
+                if (!attendanceData[monthIdx][sIdx]) {
+                    attendanceData[monthIdx][sIdx] = {};
+                }
+
+                const studentRecords = attendanceData[monthIdx][sIdx];
+                let countH = 0, countS = 0, countI = 0, countA = 0, countB = 0;
+
+                let rowHTML = `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="border border-slate-300 p-1 font-medium text-slate-600">${sIdx + 1}</td>
+                        <td class="border border-slate-300 p-1.5 text-left font-semibold text-slate-800">${escapeHTML(studentName)}</td>
+                `;
+
+                // Render Cells Presensi Harian
+                for (let d = 1; d <= totalDays; d++) {
+                    const status = studentRecords[d] || '';
+                    const dateObj = new Date(2026, monthIdx, d);
+                    const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+
+                    // Hitung Statistik Siswa
+                    if (status === 'H') countH++;
+                    else if (status === 'S') countS++;
+                    else if (status === 'I') countI++;
+                    else if (status === 'A') countA++;
+                    else if (status === 'B') countB++;
+
+                    // Color Styling for Status
+                    let statusClass = 'text-slate-400';
+                    if (status === 'H') statusClass = 'bg-emerald-100 text-emerald-800 font-bold';
+                    else if (status === 'S') statusClass = 'bg-amber-100 text-amber-800 font-bold';
+                    else if (status === 'I') statusClass = 'bg-blue-100 text-blue-800 font-bold';
+                    else if (status === 'A') statusClass = 'bg-rose-100 text-rose-800 font-bold';
+                    else if (status === 'B') statusClass = 'bg-purple-100 text-purple-800 font-bold';
+                    else if (isWeekend) statusClass = 'bg-slate-200/60';
+
+                    rowHTML += `
+                        <td class="border border-slate-300 p-0 text-center cursor-pointer transition ${statusClass}"
+                            onclick="cycleStatus(${monthIdx}, ${sIdx}, ${d})">
+                            <span class="block w-full h-full py-1">${status}</span>
+                        </td>
+                    `;
+                }
+
+                // Hitung Persentase Kehadiran Individual
+                const totalMeetings = countH + countS + countI + countA + countB;
+                const percentage = totalMeetings > 0 ? Math.round((countH / totalMeetings) * 100) : 0;
+
+                // Color badge for percentage
+                let badgeClass = 'text-slate-700';
+                if (percentage >= 85) badgeClass = 'bg-emerald-50 text-emerald-700 font-bold';
+                else if (percentage >= 75) badgeClass = 'bg-amber-50 text-amber-700 font-bold';
+                else if (totalMeetings > 0) badgeClass = 'bg-rose-50 text-rose-700 font-bold';
+
+                // Rekap Columns
+                rowHTML += `
+                    <td class="border border-slate-300 p-1 font-semibold text-emerald-700 bg-emerald-50/40">${countH || '-'}</td>
+                    <td class="border border-slate-300 p-1 font-semibold text-amber-700 bg-amber-50/40">${countS || '-'}</td>
+                    <td class="border border-slate-300 p-1 font-semibold text-blue-700 bg-blue-50/40">${countI || '-'}</td>
+                    <td class="border border-slate-300 p-1 font-semibold text-rose-700 bg-rose-50/40">${countA || '-'}</td>
+                    <td class="border border-slate-300 p-1 font-semibold text-purple-700 bg-purple-50/40">${countB || '-'}</td>
+                    <td class="border border-slate-300 p-1 ${badgeClass}">${percentage}%</td>
+                </tr>`;
+
+                tbody.innerHTML += rowHTML;
+
+                // Accumulate Class Statistics
+                totalClassH += countH;
+                totalClassS += countS;
+                totalClassI += countI;
+                totalClassA += countA;
+                totalClassB += countB;
+                totalClassEntries += totalMeetings;
+            });
+
+            // Render Footers (Rekap Harian per Tanggal)
+            renderDailySummaryRows(monthIdx, totalDays);
+
+            // Update Class Overall Cards
+            const avgPresence = totalClassEntries > 0 ? Math.round((totalClassH / totalClassEntries) * 100) : 0;
+            document.getElementById('classAvgPresence').innerText = `${avgPresence}%`;
+            document.getElementById('classTotalSakit').innerText = totalClassS;
+            document.getElementById('classTotalIzin').innerText = totalClassI;
+            document.getElementById('classTotalAlpa').innerText = totalClassA;
+            document.getElementById('classTotalBolos').innerText = totalClassB;
+        }
+
+        // Render Baris Rekap Harian di Bagian Footer Tabel
+        function renderDailySummaryRows(monthIdx, totalDays) {
+            const statuses = ['H', 'S', 'I', 'A', 'B'];
+            const targetRows = {
+                'H': document.getElementById('dailyHadirRow'),
+                'S': document.getElementById('dailySakitRow'),
+                'I': document.getElementById('dailyIzinRow'),
+                'A': document.getElementById('dailyAlpaRow'),
+                'B': document.getElementById('dailyBolosRow')
+            };
+
+            statuses.forEach(st => {
+                let html = '';
+                let grandTotalStatus = 0;
+
+                for (let d = 1; d <= totalDays; d++) {
+                    let countDay = 0;
+                    rawStudents.forEach((_, sIdx) => {
+                        if (attendanceData[monthIdx] && attendanceData[monthIdx][sIdx] && attendanceData[monthIdx][sIdx][d] === st) {
+                            countDay++;
+                        }
+                    });
+                    grandTotalStatus += countDay;
+
+                    const dateObj = new Date(2026, monthIdx, d);
+                    const isWeekend = (dateObj.getDay() === 0 || dateObj.getDay() === 6);
+                    const bgStyle = isWeekend ? 'bg-slate-200/60' : 'bg-slate-50';
+
+                    html += `<td class="border border-slate-300 p-1 text-center font-bold text-[11px] ${bgStyle}">${countDay || ''}</td>`;
+                }
+
+                // Add Empty placeholders for Rekap columns at footer
+                html += `
+                    <td colspan="5" class="border border-slate-300 p-1 text-center font-bold bg-slate-200 text-slate-800">${grandTotalStatus}</td>
+                    <td class="border border-slate-300 bg-slate-300"></td>
+                `;
+
+                while (targetRows[st].cells.length > 1) {
+                    targetRows[st].deleteCell(1);
+                }
+                targetRows[st].insertAdjacentHTML('beforeend', html);
+            });
+        }
+
+        // Fitur Mengubah Status Kehadiran secara Bergantian Saat Di-klik
+        function cycleStatus(monthIdx, studentIdx, day) {
+            const current = attendanceData[monthIdx][studentIdx][day] || '';
+            const statusSequence = ['', 'H', 'S', 'I', 'A', 'B'];
+            const nextIndex = (statusSequence.indexOf(current) + 1) % statusSequence.length;
+            const newStatus = statusSequence[nextIndex];
+
+            if (newStatus === '') {
+                delete attendanceData[monthIdx][studentIdx][day];
+            } else {
+                attendanceData[monthIdx][studentIdx][day] = newStatus;
+            }
+
+            saveData();
+            renderTable();
+        }
+
+        // Reset Data Absensi Bulan Saat Ini
+        function clearCurrentMonthData() {
+            const monthIdx = parseInt(document.getElementById('monthSelect').value);
+            const monthName = monthNames[monthIdx];
+            if (confirm(`Apakah Anda yakin ingin menghapus/reset seluruh presensi untuk bulan ${monthName}?`)) {
+                attendanceData[monthIdx] = {};
+                saveData();
+                renderTable();
+            }
+        }
+
+        // Modal Handlers
+        function openFormulaModal() {
+            document.getElementById('formulaModal').classList.remove('hidden');
+        }
+
+        function closeFormulaModal() {
+            document.getElementById('formulaModal').classList.add('hidden');
+        }
+
+        // Ekspor ke Format Excel (.xlsx)
+        function exportToExcel() {
+            const monthIdx = parseInt(document.getElementById('monthSelect').value);
+            const monthName = monthNames[monthIdx];
+            const activeClass = classStore.find(classInfo => classInfo.id === activeClassId);
+            const wb = XLSX.utils.book_new();
+            
+            // Format Table Element to Sheet
+            const table = document.getElementById('attendanceTable');
+            const ws = XLSX.utils.table_to_sheet(table);
+
+            XLSX.utils.book_append_sheet(wb, ws, `Absensi_${monthName}`);
+            const classFileName = activeClass.name.replace(/[<>:"/\\|?*]+/g, '-').trim();
+            XLSX.writeFile(wb, `Rekap_Absensi_SMKN2_TorajaUtara_${classFileName}_${monthName}_2026.xlsx`);
+        }
+
+        // Format tanggal hari ini untuk tanda tangan
+        function setupSignatureDate() {
+            const today = new Date();
+            const day = today.getDate();
+            const month = monthNames[today.getMonth()];
+            const year = today.getFullYear();
+            document.getElementById('currentDateFormatted').innerText = `${day} ${month} ${year}`;
+        }
+
+        // Initializing Application
+        window.onload = function() {
+            initData();
+            renderTable();
+            setupSignatureDate();
+        };
+    </script>
+</body>
+</html>
